@@ -4,6 +4,10 @@ An interactive web application engineered to visualize the A* (A-Star) Pathfindi
 
 This project contextualizes standard graph theory through the lens of a strategy game base attack. Users can construct impenetrable walls and defensive layouts, then initiate the algorithm to watch the mathematical logic route the optimal path to the target in real-time. 
 
+<div align="center">
+  <img src="public/demo.gif" alt="Pathfinding Animation" width="800" />
+</div>
+
 ### Live Demo
 [**Click here to view the live visualization**](https://imhammad.github.io/pathfinding-visualizer/)
 
