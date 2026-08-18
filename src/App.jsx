@@ -85,9 +85,15 @@ export default function App() {
         <h1 className="text-4xl font-bold text-slate-800 mb-2">
           Base Attack Pathfinding
         </h1>
-        <p className="text-slate-500">
+        <p className="text-slate-500 mb-4">
           A* Algorithm Visualizer
         </p>
+        <button 
+          onClick={() => console.log("A* will run here!")}
+          className="px-6 py-3 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all shadow-md"
+        >
+          Start Attack
+        </button>
       </header>
 
       {/* Added select-none to prevent the browser from highlighting elements while dragging */}
