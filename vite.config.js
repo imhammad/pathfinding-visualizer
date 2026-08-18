@@ -7,4 +7,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // Tells Vite where this will be hosted
+  base: '/pathfinding-visualizer/',
 })
