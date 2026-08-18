@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Node from './components/Node';
+import { aStar, getNodesInShortestPathOrder } from './algorithms/aStar';
 
 const ROWS = 20;
 const COLS = 40;
@@ -11,9 +12,8 @@ const END_NODE_COL = 34;
 
 export default function App() {
   const [grid, setGrid] = useState([]);
-  
-  // NEW: State to track if the mouse button is currently pressed
   const [mouseIsPressed, setMouseIsPressed] = useState(false);
+  const [isVisualizing, setIsVisualizing] = useState(false);
 
   useEffect(() => {
     const initialGrid = createInitialGrid();
@@ -45,32 +45,24 @@ export default function App() {
     };
   };
 
-  // NEW: Helper function to safely update the grid without mutating the original array
   const getNewGridWithWallToggled = (grid, row, col) => {
     const newGrid = grid.slice();
     const node = newGrid[row][col];
-    
-    // Safety check: Prevent users from drawing walls over the Start or End points
     if (node.isStart || node.isEnd) return grid;
-
-    const newNode = {
-      ...node,
-      isWall: !node.isWall,
-    };
+    const newNode = { ...node, isWall: !node.isWall };
     newGrid[row][col] = newNode;
     return newGrid;
   };
 
-  // NEW: Mouse Interaction Handlers
   const handleMouseDown = (row, col) => {
+    if (isVisualizing) return;
     const newGrid = getNewGridWithWallToggled(grid, row, col);
     setGrid(newGrid);
     setMouseIsPressed(true);
   };
 
   const handleMouseEnter = (row, col) => {
-    // Only draw a wall if the mouse is actively being held down
-    if (!mouseIsPressed) return;
+    if (!mouseIsPressed || isVisualizing) return;
     const newGrid = getNewGridWithWallToggled(grid, row, col);
     setGrid(newGrid);
   };
@@ -79,27 +71,126 @@ export default function App() {
     setMouseIsPressed(false);
   };
 
+  const animateShortestPath = (nodesInShortestPathOrder) => {
+    for (let i = 0; i < nodesInShortestPathOrder.length; i++) {
+      setTimeout(() => {
+        const node = nodesInShortestPathOrder[i];
+        if (!node.isStart && !node.isEnd) {
+          document.getElementById(`node-${node.row}-${node.col}`).className =
+            'w-6 h-6 border border-blue-50 node-shortest-path';
+        }
+      }, 50 * i);
+    }
+    setTimeout(() => setIsVisualizing(false), 50 * nodesInShortestPathOrder.length);
+  };
+
+  const animateAStar = (visitedNodesInOrder, nodesInShortestPathOrder) => {
+    for (let i = 0; i <= visitedNodesInOrder.length; i++) {
+      if (i === visitedNodesInOrder.length) {
+        setTimeout(() => {
+          animateShortestPath(nodesInShortestPathOrder);
+        }, 10 * i);
+        return;
+      }
+      setTimeout(() => {
+        const node = visitedNodesInOrder[i];
+        if (!node.isStart && !node.isEnd && !node.isWall) {
+          document.getElementById(`node-${node.row}-${node.col}`).className =
+            'w-6 h-6 border border-blue-50 node-visited';
+        }
+      }, 10 * i);
+    }
+  };
+
+  const visualizeAStar = () => {
+    if (isVisualizing) return;
+    setIsVisualizing(true);
+    const startNode = grid[START_NODE_ROW][START_NODE_COL];
+    const endNode = grid[END_NODE_ROW][END_NODE_COL];
+    
+    const visitedNodesInOrder = aStar(grid, startNode, endNode);
+    const nodesInShortestPathOrder = getNodesInShortestPathOrder(endNode);
+    
+    animateAStar(visitedNodesInOrder, nodesInShortestPathOrder);
+  };
+
+  const clearPath = () => {
+    if (isVisualizing) return;
+    const newGrid = createInitialGrid();
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        newGrid[row][col].isWall = grid[row][col].isWall;
+        const node = newGrid[row][col];
+        let extraClassName = 'bg-white';
+        if (node.isStart) extraClassName = 'bg-green-500 shadow-sm z-10 relative';
+        else if (node.isEnd) extraClassName = 'bg-red-500 shadow-sm z-10 relative';
+        else if (node.isWall) extraClassName = 'bg-slate-800 border-slate-700';
+        document.getElementById(`node-${row}-${col}`).className =
+          `w-6 h-6 border border-blue-50 ${extraClassName}`;
+      }
+    }
+    setGrid(newGrid);
+  };
+
+  const clearBoard = () => {
+    if (isVisualizing) return;
+    const newGrid = createInitialGrid();
+    setGrid(newGrid);
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const node = newGrid[row][col];
+        let extraClassName = 'bg-white';
+        if (node.isStart) extraClassName = 'bg-green-500 shadow-sm z-10 relative';
+        else if (node.isEnd) extraClassName = 'bg-red-500 shadow-sm z-10 relative';
+        document.getElementById(`node-${row}-${col}`).className =
+          `w-6 h-6 border border-blue-50 ${extraClassName}`;
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center py-8">
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-slate-800 mb-2">
           Base Attack Pathfinding
         </h1>
-        <p className="text-slate-500 mb-4">
+        <p className="text-slate-500 mb-6">
           A* Algorithm Visualizer
         </p>
-        <button 
-          onClick={() => console.log("A* will run here!")}
-          className="px-6 py-3 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all shadow-md"
-        >
-          Start Attack
-        </button>
+        
+        <div className="flex gap-4 justify-center">
+          <button 
+            onClick={() => visualizeAStar()}
+            disabled={isVisualizing}
+            className={`px-6 py-3 font-bold rounded-full transition-all shadow-md text-white
+              ${isVisualizing 
+                ? 'bg-slate-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'}`}
+          >
+            {isVisualizing ? 'Attack in Progress...' : 'Start Attack'}
+          </button>
+          
+          <button 
+            onClick={() => clearPath()}
+            disabled={isVisualizing}
+            className="px-6 py-3 font-bold rounded-full transition-all shadow-md bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Clear Path
+          </button>
+
+          <button 
+            onClick={() => clearBoard()}
+            disabled={isVisualizing}
+            className="px-6 py-3 font-bold rounded-full transition-all shadow-md bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Clear Board
+          </button>
+        </div>
       </header>
 
-      {/* Added select-none to prevent the browser from highlighting elements while dragging */}
       <main 
         className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 select-none"
-        onMouseLeave={() => setMouseIsPressed(false)} // Failsafe: Stops drawing if you drag outside the grid
+        onMouseLeave={() => setMouseIsPressed(false)}
       >
         {grid.map((row, rowIdx) => (
           <div key={rowIdx} className="flex">
