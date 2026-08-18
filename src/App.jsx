@@ -11,6 +11,9 @@ const END_NODE_COL = 34;
 
 export default function App() {
   const [grid, setGrid] = useState([]);
+  
+  // NEW: State to track if the mouse button is currently pressed
+  const [mouseIsPressed, setMouseIsPressed] = useState(false);
 
   useEffect(() => {
     const initialGrid = createInitialGrid();
@@ -42,6 +45,40 @@ export default function App() {
     };
   };
 
+  // NEW: Helper function to safely update the grid without mutating the original array
+  const getNewGridWithWallToggled = (grid, row, col) => {
+    const newGrid = grid.slice();
+    const node = newGrid[row][col];
+    
+    // Safety check: Prevent users from drawing walls over the Start or End points
+    if (node.isStart || node.isEnd) return grid;
+
+    const newNode = {
+      ...node,
+      isWall: !node.isWall,
+    };
+    newGrid[row][col] = newNode;
+    return newGrid;
+  };
+
+  // NEW: Mouse Interaction Handlers
+  const handleMouseDown = (row, col) => {
+    const newGrid = getNewGridWithWallToggled(grid, row, col);
+    setGrid(newGrid);
+    setMouseIsPressed(true);
+  };
+
+  const handleMouseEnter = (row, col) => {
+    // Only draw a wall if the mouse is actively being held down
+    if (!mouseIsPressed) return;
+    const newGrid = getNewGridWithWallToggled(grid, row, col);
+    setGrid(newGrid);
+  };
+
+  const handleMouseUp = () => {
+    setMouseIsPressed(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center py-8">
       <header className="mb-8 text-center">
@@ -53,7 +90,11 @@ export default function App() {
         </p>
       </header>
 
-      <main className="bg-white p-4 rounded-xl shadow-lg border border-slate-200">
+      {/* Added select-none to prevent the browser from highlighting elements while dragging */}
+      <main 
+        className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 select-none"
+        onMouseLeave={() => setMouseIsPressed(false)} // Failsafe: Stops drawing if you drag outside the grid
+      >
         {grid.map((row, rowIdx) => (
           <div key={rowIdx} className="flex">
             {row.map((node, nodeIdx) => {
@@ -66,6 +107,9 @@ export default function App() {
                   isStart={isStart}
                   isEnd={isEnd}
                   isWall={isWall}
+                  onMouseDown={(row, col) => handleMouseDown(row, col)}
+                  onMouseEnter={(row, col) => handleMouseEnter(row, col)}
+                  onMouseUp={() => handleMouseUp()}
                 />
               );
             })}
