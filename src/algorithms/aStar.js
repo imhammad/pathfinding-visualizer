@@ -3,12 +3,20 @@
 export function aStar(grid, startNode, endNode) {
   const visitedNodesInOrder = [];
   startNode.distance = 0; 
-  startNode.fScore = 0;
+  
+  // FIX: Properly calculate initial fScore instead of setting to 0
+  startNode.fScore = manhattanDistance(startNode, endNode);
+  
   const unvisitedNodes = getAllNodes(grid);
 
   while (unvisitedNodes.length > 0) {
-    // Sort nodes to always explore the lowest fScore first
-    unvisitedNodes.sort((a, b) => (a.fScore || Infinity) - (b.fScore || Infinity));
+    // FIX: Safely check for undefined without treating 0 as a falsy value
+    unvisitedNodes.sort((a, b) => {
+      const fA = a.fScore !== undefined ? a.fScore : Infinity;
+      const fB = b.fScore !== undefined ? b.fScore : Infinity;
+      return fA - fB;
+    });
+    
     const closestNode = unvisitedNodes.shift();
 
     // If we are trapped by walls and the closest node is at Infinity, stop.
